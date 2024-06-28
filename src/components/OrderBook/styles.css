@@ -1,0 +1,52 @@
+.widget {
+    margin: 20px;
+    width: 600px;
+}
+
+.orders-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    font-size: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #9fa7ad;
+    margin-bottom: 10px;
+}
+
+.orders-header .title {
+    text-transform: uppercase;
+    color: #fff;
+    margin-right: 20px;
+    font-weight: bold;
+}
+
+.orders-header .pair {
+    text-transform: uppercase;
+    color: #9fa7ad;
+}
+
+.orders_container {
+    display: flex;
+    flex-direction: row;
+}
+
+.orders_container .half_part {
+    width: 50%;
+}
+
+.grid_row {
+    display: flex;
+    flex-direction: row;
+}
+
+.grid_row > div {
+    width: 33%;
+    font-size: 11px;
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+.grid_row .header {
+    text-transform: uppercase;
+    color: #9fa7ad;
+}
