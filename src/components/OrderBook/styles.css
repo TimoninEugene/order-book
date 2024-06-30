@@ -50,3 +50,7 @@
     text-transform: uppercase;
     color: #9fa7ad;
 }
+
+.count_field {
+    text-align: center;
+}

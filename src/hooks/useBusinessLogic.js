@@ -1,95 +1,91 @@
-import { useDispatch, useSelector } from 'react-redux';
+import { useEffect, useCallback } from 'react';
+import { useDispatch } from 'react-redux';
 
-import { setBids, setAsks, selectBids, selectAsks } from '../store/slices/orders';
+import store from '../store/store';
+import { setBids, setAsks } from '../store/slices/orders';
+import orderBookWebSocket from '../utils/OrderBookWebSocket';
 
 const useBusinessLogic = () => {
     const dispatch = useDispatch();
-    const currentBids = useSelector(selectBids);
-    const currentAsks = useSelector(selectAsks);
-    let webSocket = null;
 
-    const initWebSocket = () => {
-        webSocket = new WebSocket('wss://api-pub.bitfinex.com/ws/2');
+    const processBookSnapshot = useCallback(
+        data => {
+            const snapshotBids = [];
+            const snapshotAsks = [];
 
-        webSocket.onopen = () => {
-            webSocket.send(
-                JSON.stringify({
-                    event: 'subscribe',
-                    channel: 'book',
-                    symbol: 'tBTCUSD',
-                    prec: 'P0',
-                    freq: 'F0',
-                    len: '25',
-                    subId: 123,
-                }),
-            );
-        };
+            data.forEach(order => {
+                const [price, count, amount] = order;
+                if (amount > 0) {
+                    snapshotBids.push({ price, count, amount });
+                } else {
+                    snapshotAsks.push({ price, count, amount: -amount });
+                }
+            });
+            snapshotBids.sort((item1, item2) => item1.price - item2.price);
+            snapshotAsks.sort((item1, item2) => item1.price - item2.price);
+            dispatch(setBids(snapshotBids));
+            dispatch(setAsks(snapshotAsks));
+        },
+        [dispatch],
+    );
 
-        webSocket.onmessage = message => {
-            const data = JSON.parse(message.data);
-
+    const processMessage = useCallback(
+        data => {
             if (Array.isArray(data) && data[1] !== 'hb') {
                 const [, bookData] = data;
 
                 if (Array.isArray(bookData[0])) {
-                    const bids = [];
-                    const asks = [];
-
-                    bookData.forEach(order => {
-                        const [price, count, amount] = order;
-                        if (amount > 0) {
-                            bids.push({ price, count, amount });
-                        } else {
-                            asks.push({ price, count, amount: -amount });
-                        }
-                    });
-
-                    dispatch(setBids(bids));
-                    dispatch(setAsks(asks));
+                    processBookSnapshot(bookData);
                 } else {
                     const [price, count, amount] = bookData;
+                    const { bids: currentBids, asks: currentAsks } = store.getState().orders;
+                    const bids = [...currentBids];
+                    const asks = [...currentAsks];
 
+                    // remove the order
                     if (count === 0) {
-                        dispatch(setBids(currentBids.filter(order => order.price !== price)));
-                        dispatch(setAsks(currentAsks.filter(order => order.price !== price)));
-                    } else {
-                        if (amount > 0) {
-                            const orderIndex = currentBids.findIndex(order => order.price === price);
-                            if (orderIndex > -1) {
-                                const tmpBids = [...currentBids];
-                                tmpBids[orderIndex] = { price, count, amount };
-                                dispatch(setBids(tmpBids));
-                                return;
-                            }
-
-                            dispatch(setBids([...currentBids, { price, count, amount }]));
-                            return;
-                        } else {
-                            const orderIndex = currentAsks.findIndex(order => order.price === price);
-                            if (orderIndex > -1) {
-                                const tmp = [...currentAsks];
-                                tmp[orderIndex] = { price, count, amount: -amount };
-                                dispatch(setAsks(tmp));
-                                return;
-                            }
-
-                            dispatch(setAsks([...currentAsks, { price, count, amount: -amount }]));
+                        if (amount === 1) {
+                            dispatch(setBids(bids.filter(order => order.price !== price)));
                         }
+                        if (amount === -1) {
+                            dispatch(setAsks(asks.filter(order => order.price !== price)));
+                        }
+                    } else if (amount > 0) {
+                        // add or update the order
+                        const order = { price, count, amount };
+                        const orderIndex = bids.findIndex(order => order.price === price);
+                        if (orderIndex > -1) {
+                            bids[orderIndex] = order;
+                            dispatch(setBids(bids));
+                            return;
+                        }
+
+                        bids.push(order);
+                        bids.sort((item1, item2) => item1.price - item2.price);
+                        dispatch(setBids(bids));
+                        return;
+                    } else {
+                        const order = { price, count, amount: -amount };
+                        const orderIndex = asks.findIndex(order => order.price === price);
+                        if (orderIndex > -1) {
+                            asks[orderIndex] = order;
+                            dispatch(setAsks(asks));
+                            return;
+                        }
+                        asks.push(order);
+                        asks.sort((item1, item2) => item1.price - item2.price);
+                        dispatch(setAsks(asks));
                     }
                 }
             }
-        };
+        },
+        [dispatch, processBookSnapshot],
+    );
 
-        webSocket.onclose = () => {
-            setTimeout(initWebSocket, 2000);
-        };
-
-        webSocket.onerror = e => {
-            console.error(e);
-        };
-    };
-
-    return { initWebSocket, bids: currentBids, asks: currentAsks };
+    useEffect(() => {
+        orderBookWebSocket.connect();
+        orderBookWebSocket.addSubscriber(processMessage);
+    }, [processMessage]);
 };
 
 export default useBusinessLogic;

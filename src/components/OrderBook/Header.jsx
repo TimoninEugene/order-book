@@ -1,11 +1,8 @@
-const Header = () => {
-    return (
-        <div className="grid_row">
-            <div className="header">Price</div>
-            <div className="header">Count</div>
-            <div className="header">Amount</div>
-        </div>
-    );
-};
+const Header = () => (
+    <div className="orders-header">
+        <div className="title">Order book</div>
+        <div className="pair">BTC/USD</div>
+    </div>
+);
 
 export default Header;
