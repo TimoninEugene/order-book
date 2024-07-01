@@ -49,26 +49,14 @@ export default slice;
 
 export const { processSnapshot, processSingleMessage } = slice.actions;
 
-export const selectBids = () => {
-    const selectAllBids = createSelector([state => state[sliceName].bids], bids => {
-        const res = [];
-        Object.keys(bids)
-            .sort()
-            .map(bidPrice => res.push(bids[bidPrice]));
-        return res;
-    });
+export const selectBids = createSelector([state => state[sliceName].bids], bids =>
+    Object.keys(bids)
+        .sort()
+        .map(bidPrice => bids[bidPrice]),
+);
 
-    return selectAllBids;
-};
-
-export const selectAsks = () => {
-    const selectAllBids = createSelector([state => state[sliceName].asks], asks => {
-        const res = [];
-        Object.keys(asks)
-            .sort()
-            .map(bidPrice => res.push(asks[bidPrice]));
-        return res;
-    });
-
-    return selectAllBids;
-};
+export const selectAsks = createSelector([state => state[sliceName].asks], asks =>
+    Object.keys(asks)
+        .sort()
+        .map(askPrice => asks[askPrice]),
+);

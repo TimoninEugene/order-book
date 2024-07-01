@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import { selectBids } from '../../store/slices/orders';
 
 const Bids = () => {
-    const bids = useSelector(selectBids());
+    const bids = useSelector(selectBids);
 
     return (
         <>
